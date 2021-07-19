@@ -2,7 +2,10 @@
 #include <MechaQMC5883.h>
 
 MechaQMC5883 qmc;
-const int destino = 10;
+const short destino = 350;
+const short tolerancia = 3;
+short diferenca = 0;
+short comando = 0;
 
 void setup() {
   Wire.begin();
@@ -16,57 +19,59 @@ void loop() {
   int azimuth;
   //float azimuth; //is supporting float too
   qmc.read(&x, &y, &z,&azimuth);
-  Serial.print(" a: ");
+  Serial.println();
+  Serial.println();
+  Serial.print("az: ");
   Serial.print(azimuth);
   Serial.println();
-  Navega(azimuth);
-  delay(300);
+  Orientacao(azimuth);
+  delay(500);
 }
 
-void Navega(int az){
-  bool azPositivo = az <= 180;
+void Orientacao(int rumoAtual){
+  bool azPositivo = rumoAtual <= 180;
   bool destinoPositivo = destino <= 180;
-  Serial.print("dif:");
-  Serial.print(az - destino);
-  Serial.println();
-  
-  if(azPositivo && destinoPositivo){
-    if(az > destino){
-      Serial.println("ambos positivos esquerda");       
-    }
-    else{
-      Serial.println("ambos positivos direita");
-    }
-  }
 
-  if(!azPositivo && !destinoPositivo){
-    if(az < destino){
-      Serial.println("ambos negativos !direita");       
+  if((azPositivo && destinoPositivo) || (!azPositivo && !destinoPositivo)){
+    if(rumoAtual > destino){
+      comando = 2;
     }
     else{
-      Serial.println("ambos negativos !esquerda");
+      comando = 1;
     }
+
+    diferenca = abs(rumoAtual - destino);
   }
 
   if(azPositivo != destinoPositivo){
-    if(!azPositivo){
-      az = az - 180;
-      if(az > destino){
-        Serial.println("!azPositivo direita");       
+    if(azPositivo){
+      if(diferenca < 180){
+        comando = 2;
       }
       else{
-        Serial.println("!azPositivo esquerda");       
+        comando = 1;
       }
     }
-
-    if(!destinoPositivo){
-      az = az + 180;
-      if(az > destino){
-        Serial.println("!azPositivo direita");
+    else{
+      if(diferenca > 180){
+        comando = 2;
       }
       else{
-        Serial.println("!azPositivo esquerda");       
+        comando = 1;
       }
     }
+    
+    diferenca = 360 - destino + rumoAtual; 
   }
+
+  if(comando == 1 && diferenca > tolerancia ){
+    Serial.println("Virar a direita");  
+  }else if(comando == 2 && diferenca > tolerancia){
+    Serial.println("Virar a esquerda");  
+  }else{
+    Serial.println("Manter");  
+  }
+
+  Serial.print("Diferenca:");
+  Serial.print(diferenca); 
 }
